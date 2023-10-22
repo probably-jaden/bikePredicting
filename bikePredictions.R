@@ -22,9 +22,32 @@ bike_recipe <- recipe(count ~ ., data=train) %>% # Set model formula and dataset
 train_preprocessed <- prep(bike_recipe, data = train)
 
 # Preview the preprocessed data
+head(bake(train_preprocessed, new_data = train))
 head(bake(train_preprocessed, new_data = test))
 
-bake(train_preprocessed, new_data = train)
-bake(train_preprocessed, new_data = test) 
+## Define the model
+
+
+## Set up the whole workflow
+bike_workflow <- workflow() %>%
+  add_recipe(bike_recipe) %>%
+  add_model(model) %>%
+  fit(data=train)
+
+## Look at the fitted LM model this way
+extract_fit_engine(bike_workflow) %>%
+  summary()
+
+## Get Predictions for test set AND format for Kaggle
+test_preds <- predict(bike_workflow, new_data = test) %>%
+  bind_cols(., test) %>% #Bind predictions with test data
+  select(datetime, .pred) %>% #Just keep datetime and predictions
+  rename(count=.pred) %>% #rename pred to count (for submission to Kaggle)
+  mutate(count=pmax(0, count)) %>% #pointwise max of (0, prediction)
+  mutate(datetime=as.character(format(datetime))) #needed for right format to Kaggle
+
+## Write prediction file to CSV
+vroom_write(x=test_preds, file="./BikeRentals/TestPreds.csv", delim=",")
+
 
 
