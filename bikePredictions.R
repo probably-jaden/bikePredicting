@@ -1,6 +1,8 @@
 library(tidyverse)
 library(tidymodels)
 library(vroom)
+library(parsnip)
+library(poissonreg)
 
 test <- vroom("testbike.csv")
 train <- vroom("trainbike.csv")
@@ -26,7 +28,8 @@ head(bake(train_preprocessed, new_data = train))
 head(bake(train_preprocessed, new_data = test))
 
 ## Define the model
-
+model <- poisson_reg() %>% 
+  set_engine("glm")
 
 ## Set up the whole workflow
 bike_workflow <- workflow() %>%
