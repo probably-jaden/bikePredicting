@@ -7,8 +7,9 @@ train <- vroom("trainbike.csv")
 
 train <- train %>% 
   mutate(logCount = log(count)) %>% 
-  select(-c(casual, registered))
+  select(-c(casual, registered, count))
 
+#train$logCount <- ifelse(train$logCount == 0, 0.001, train$logCount)
 
 bike_recipe <- recipe(logCount ~ ., data=train) %>% # Set model formula and dataset
   step_mutate(weather=ifelse(weather==4, 3, weather)) %>%
@@ -31,25 +32,49 @@ head(bake(train_preprocessed, new_data = train))
 head(bake(train_preprocessed, new_data = test))
 
 ## Define the model
-model <- linear_reg(penalty = 3, mixture = .6) %>% 
+model <- linear_reg(penalty = tune(), mixture = tune()) %>% 
   set_engine("glmnet")
 
 ## Set up the whole workflow
 bike_workflow <- workflow() %>%
   add_recipe(bike_recipe) %>%
-  add_model(model) %>%
+  add_model(model)
+
+## Grid of values to tune over14
+tuning_grid <- grid_regular(penalty(),
+                            mixture(),
+                            levels = 10)
+
+# Split data for CV
+folds <- vfold_cv(train, v = 5, repeats=1)
+
+# Run the cross-validation
+CV_results <- bike_workflow %>%
+  tune_grid(resamples=folds,
+          grid=tuning_grid,
+          metrics=metric_set(rmse, mae, rsq))
+
+# Find Best Tuning Parameters
+bestTune <- CV_results %>%
+  select_best("rmse")
+
+
+# Finalize the Workflow & fit it
+final_wf <- bike_workflow %>%
+  finalize_workflow(bestTune) %>%
   fit(data=train)
 
 ## Look at the fitted LM model this way
-extract_fit_engine(bike_workflow) %>%
+extract_fit_engine(final_wf) %>%
   summary()
 
 ## Get Predictions for test set AND format for Kaggle
-test_preds <- predict(bike_workflow, new_data = test) %>%
+test_preds <- predict(final_wf, new_data = test) %>%
   bind_cols(., test) %>% #Bind predictions with test data
   select(datetime, .pred) %>% #Just keep datetime and predictions
-  rename(count=exp(.pred)) %>% #rename pred to count (for submission to Kaggle) as well as undo the log
+  rename(count=.pred) %>% #rename pred to count (for submission to Kaggle) as well as undo the log
   mutate(count=pmax(0, count)) %>% #pointwise max of (0, prediction)
+  mutate(count = exp(count)) %>% 
   mutate(datetime=as.character(format(datetime))) #needed for right format to Kaggle
 
 ## Write prediction file to CSV
