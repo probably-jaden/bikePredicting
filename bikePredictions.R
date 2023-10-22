@@ -19,7 +19,6 @@ bike_recipe <- recipe(logCount ~ ., data=train) %>% # Set model formula and data
   step_mutate(workingday=factor(workingday,levels=c(0,1), labels=c("No", "Yes"))) %>%
   step_poly(humidity, degree=2) %>% #Create polynomial expansion of var
   step_date(datetime, features="dow") %>% # gets day of week
-  step_time(datetime, features=c("hour")) %>%  #create time variable
   step_rm(datetime) %>%
   step_dummy(all_nominal_predictors()) %>%  # dummy variables for all categorical features
   step_normalize(all_numeric_predictors()) # data must be normalized to enact penalty's
@@ -32,18 +31,22 @@ head(bake(train_preprocessed, new_data = train))
 head(bake(train_preprocessed, new_data = test))
 
 ## Define the model
-model <- linear_reg(penalty = tune(), mixture = tune()) %>% 
-  set_engine("glmnet")
+model <- decision_tree(tree_depth = tune(),
+                        cost_complexity = tune(),
+                        min_n=tune()) %>% #Type of model
+  set_engine("rpart") %>% # What R function to use
+  set_mode("regression")
 
 ## Set up the whole workflow
 bike_workflow <- workflow() %>%
   add_recipe(bike_recipe) %>%
   add_model(model)
 
-## Grid of values to tune over14
-tuning_grid <- grid_regular(penalty(),
-                            mixture(),
-                            levels = 10)
+## Grid of values to tune over
+tuning_grid <- grid_regular(tree_depth(),
+                            cost_complexity(),
+                            min_n(),
+                            levels = 5)
 
 # Split data for CV
 folds <- vfold_cv(train, v = 5, repeats=1)
