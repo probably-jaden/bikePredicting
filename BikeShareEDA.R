@@ -5,7 +5,7 @@ library(plotly)
 library(readr)
 library(vroom)
 
-data <-vroom("trainbike.csv")
+data <-read_csv("train.csv")
 summary(data)
 
 plot_ly(data, x = ~temp, y = ~registered, z = ~windspeed, type = "scatter3d", mode = "markers", size = 0.1)
@@ -36,14 +36,14 @@ DataExplorer::plot_intro(trainV)
 #   DataExplorer::plot_correlation(dataset) - correlation heat map between variables
 heatMapCorr<-DataExplorer::plot_correlation(trainV)
 
-tempS <- ggplot(data=data, aes(x=temp, y=count, color = workingday))+
+tempS <- ggplot(data=trainV, aes(x=temp, y=count, color = workingday))+
   geom_point(size=0.1)+
   geom_smooth()+
   ggtitle("Temperature vs Bike Rentals")+
   ylab("Bike Rental")+
   xlab("Temperature in Celcsius")
 
-humdS <- ggplot(data=data, aes(x=humidity, y=count, color = workingday))+
+humdS <- ggplot(data=trainV, aes(x=humidity, y=count, color = workingday))+
   geom_point(size=0.1)+
   geom_smooth()+
   ggtitle("Humidity vs Bike Rentals")+
@@ -60,13 +60,13 @@ seasS <- ggplot(data=trainV, aes(x=season, y=count, color = workingday))+
 
 
 #   DataExplorer::plot_bar(dataset) - bar charts of all discrete variables
-DataExplorer::plot_bar(data)
+DataExplorer::plot_bar(trainV)
 
 #   DataExplorer::plot_histograms(dataset) - histograms of all numerical variables
-DataExplorer::plot_histograms(data) 
+DataExplorer::plot_histograms(trainV) 
 
 #   DataExplorer::plot_missing(dataset) - percent missing in each column
-DataExplorer::plot_missing(data) 
+DataExplorer::plot_missing(trainV) 
 
 #   GGally::ggpairs(dataset) - 1/2 scatterplot and 1/2 correlation heat map
 #GGally::ggpairs(trainV) # dangerously big
@@ -93,7 +93,7 @@ Heatmap(correlation_matrix)
 library(heatmaply)
 
 # Assuming `trainV` is a dataframe containing your data
-correlation_matrix <- cor(data)
+correlation_matrix <- cor(trainV)
 heatmaply(correlation_matrix)
 
 
